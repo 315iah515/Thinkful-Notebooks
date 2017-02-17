@@ -6,6 +6,57 @@ import re
 PMCregex = r'PMC\d+'
 PMIDregex = r'PMID:\s?\d+'
 
+# The dictionary serves to convert publisher and journal names into the most
+# common occurrences contained with the CSV file. For example converting
+# abbreviated journal names to the full name. Note, these may not be accurate.
+# The keys assume that text has been converted to lower case and then converted
+# to title case.  In other words, the keys do not exist in the raw file until
+# they have ran through the convert_journal_pub_names function.
+
+PUB_JOURNAL_LOOKUP = {
+    'Acs': 'American Chemical Society',
+    'Acs (Amercian Chemical Society) Publications': 'American Chemical Society',
+    'Asm': 'American Society for Microbiology',
+    'Biomed Central Limited': 'BioMed Central',
+    'Biomed Central Ltd':'BioMed Central',
+    'Bmj':'British Medical Journal',
+    'Bmj Group':'British Medical Journal',
+    'Bmj Publishing Group':'British Medical Journal',
+    'Bmj Publishing Group Ltd':'British Medical Journal',
+    'Cadmus':'Cadmus Journal Services',
+    'Cambridge Journals':'Cambridge University Press',
+    'Cambridge Uni Press':'Cambridge University Press',
+    'Cambridge Univ Press':'Cambridge University Press',
+    'Cenveo Publisher Services/ASM JV1': 'Cenveo Publisher Services',
+    'Cold Spring Habour Press':'Cold Spring Harbor Laboratory Press',
+    'Cold Spring Harbor Press':'Cold Spring Harbor Laboratory Press',
+    'Cold Spring Harbor Publications':'Cold Spring Harbor Laboratory Press',
+    'Dartmouth Journals':'Dartmouth Journal Services',
+    'Elseveier Science':'Elsevier',
+    'Faseb':'Federation of American Societies for Experimental Biology',
+    'Federation of American Societies for Experimental Biology (FASEB)':'Federation of American Societies for Experimental Biology',
+    'Oup':'Oxford University Press',
+    'Oxford Univ Pres':'Oxford University Press',
+    'Oxford Journals':'Oxford University Press',
+    'Oxford Journals (OUP)':'Oxford University Press',
+    'Plos':'Public Library of Science',
+    'Plos (Public Library of Science)':'Public Library of Science',
+    'Royal Society': 'Royal Society of Chemistry',
+    'Rsc':'Royal Society of Chemistry',
+    'Rsc Publishing':'Royal Society of Chemistry',
+    'Aids':'Journal of Acquired Immune Deficiency Syndromes',
+    'Aids Journal':'Journal of Acquired Immune Deficiency Syndromes',
+    'Aids UK':'Journal of Acquired Immune Deficiency Syndromes',
+    'Jaids Journal of Acquired Immune Deficiency Syndromes':'Journal of Acquired Immune Deficiency Syndromes',
+    'Journal of Acquired Immune Deficiency Syndroms (JAIDS)':'Journal of Acquired Immune Deficiency Syndromes',
+    'Journal of AIDS':'Journal of Acquired Immune Deficiency Syndromes',
+    'Plos 1':'Plos One',
+    'Neuroimage':'NeuroImage'
+}
+
+
+
+
 
 def read_csv(file_path, encoding="ISO-8859-1"):
     """
@@ -58,6 +109,7 @@ def _search_pmcid_regex(id_str):
     match_str = ''
     try:
         match_str = re.search(PMCregex, id_str).group()
+
         result = True
     except AttributeError:
         pass
@@ -171,17 +223,26 @@ def remove_cost_outliers(cost, dataf, threshold):
     """
     result = cost
     if cost >= threshold:
-        result = dataf.quantile(.9)
+        result = dataf.quantile(.9).values[0]
     return result
 
 
+def convert_journal_pub_names(string):
+    """
+    Converts journal and Publication names into title case and transforms string
+    into a generalized name. These generalized terms are housed in a dictionary
+    and exchanged for the most least used term or mis spelled text. For example
+    changing ‘Neuroimgae’ into ‘NeuroImage’
 
+    Args:
+        string (str): Publication or Journal column cell contents.
 
-# file_path = '/media/ianh/space/ThinkfulData/WelcomeTrust/WELLCOME_APCspend2013_forThinkful.csv'
-# data_frame = pd.read_csv(file_path, encoding="ISO-8859-1")
-# Onedf = pd.DataFrame({'ID':data_frame['PMID/PMCID'].apply(pmcid_pmid_converter)})
-# new3_df = new2_df.apply(remove_cost_outliers, args=(new2_df, 999998))
-# if __name__ == "__main__":
-#     import argparse
-#     import sys
-#     main(sys.argv)
+    Returns:
+        str: The converted cell contents as a string instance.
+    """
+    string = str(string)
+    string = string.lower()
+    result = string.title()
+    if result in PUB_JOURNAL_LOOKUP:
+        result = PUB_JOURNAL_LOOKUP.get(result)
+    return result
